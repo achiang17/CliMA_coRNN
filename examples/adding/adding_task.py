@@ -11,13 +11,13 @@ parser = argparse.ArgumentParser(description='training parameters')
 
 parser.add_argument('--n_hid', type=int, default=128,
                     help='hidden size of recurrent net')
-parser.add_argument('--T', type=int, default=100,
+parser.add_argument('--T', type=int, default=10,
                     help='length of sequences')
-parser.add_argument('--max_steps', type=int, default=60000,
+parser.add_argument('--max_steps', type=int, default=10000,
                     help='max learning steps')
-parser.add_argument('--log_interval', type=int, default=100,
+parser.add_argument('--log_interval', type=int, default=50,
                     help='log interval')
-parser.add_argument('--batch', type=int, default=50,
+parser.add_argument('--batch', type=int, default=25,
                     help='batch size')
 parser.add_argument('--batch_test', type=int, default=1000,
                     help='size of test set')
@@ -53,6 +53,7 @@ def test():
 
 def train():
     test_mse = []
+    steps = []
     for i in range(args.max_steps):
         data, label = utils.get_batch(args.T,args.batch)
         label = label.unsqueeze(1)
@@ -66,8 +67,14 @@ def train():
         if(i%100==0 and i!=0):
             mse_error = test()
             print('Test MSE: {:.6f}'.format(mse_error))
+            steps.append(i)
             test_mse.append(mse_error)
             model.train()
+    return steps,test_mse
+
+import matplotlib.pyplot as plt
 
 if __name__ == '__main__':
-    train()
+    steps,test_mse = train()
+    plt.plot(steps,test_mse)
+    plt.savefig("MSE_vs_steps.png")
