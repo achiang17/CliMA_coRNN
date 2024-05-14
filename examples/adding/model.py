@@ -12,6 +12,15 @@ class coRNNCell(nn.Module):
         self.i2h = nn.Linear(n_inp + n_hid + n_hid, n_hid)
 
     def forward(self,x,hy,hz):
+        concatenated = torch.cat((x, hz, hy), 1)
+        
+        # Debug statements
+        print(f"x shape: {x.shape}")
+        print(f"hz shape: {hz.shape}")
+        print(f"hy shape: {hy.shape}")
+        print(f"concatenated shape: {concatenated.shape}")
+        print(f"i2h weight shape: {self.i2h.weight.shape}")
+        
         hz = hz + self.dt * (torch.tanh(self.i2h(torch.cat((x, hz, hy),1)))
                                    - self.gamma * hy - self.epsilon * hz)
         hy = hy + self.dt * hz
@@ -29,9 +38,11 @@ class coRNN(nn.Module):
         ## initialize hidden states
         hy = Variable(torch.zeros(x.size(1),self.n_hid)).to(device)
         hz = Variable(torch.zeros(x.size(1),self.n_hid)).to(device)
-
+        print(f"hy size : {hy.size()}")
         for t in range(x.size(0)):
             hy, hz = self.cell(x[t],hy,hz)
         output = self.readout(hy)
-
+        print(f"output: {output}")
+        print(f"forard output size: {output.size()}")
+        print(f"hy: {hy}")
         return output

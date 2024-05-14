@@ -12,7 +12,7 @@ end
 n = 5
 F = 0.9
 dt  = 0.01
-trajectory_length = 10
+trajectory_length = 2000
 tspan = (0.0, trajectory_length * dt)
 
 u0 = F .+ 0.5 .* (2 .* rand(n) .- 1)
@@ -20,5 +20,3 @@ prob = ODEProblem(lorenz96,u0,tspan,F)
 sol = solve(prob,Euler(),dt=dt)
 df = DataFrame(sol.u, :auto)
 CSV.write("test.csv", df)
-
-#in python can use pd.read_csv() and the df.transpose()
