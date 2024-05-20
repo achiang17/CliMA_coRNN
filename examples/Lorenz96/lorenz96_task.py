@@ -1,11 +1,13 @@
 import torch
 from torch import nn, optim
 import model
+import nrmse
 import torch.nn.utils
 import utils
 import argparse
 import os
 import matplotlib.pyplot as plt
+from statistics import mean
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -41,7 +43,9 @@ n_out = 5
 
 model = model.coRNN(n_inp, args.n_hid, n_out, args.dt, args.gamma, args.epsilon).to(device)
 
-objective = nn.MSELoss()
+
+
+objective = nrmse.NRMSELoss()
 optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
 def test(path_to_test_csv):
@@ -59,7 +63,7 @@ def train():
     files = os.listdir(train_dir)
     num_files = len(files)
 
-    test_mse = []
+    test_err = []
     steps = []
     
     for i in range(1,num_files+1):
@@ -72,19 +76,20 @@ def train():
 
         if(i%1==0 and i!=0):
             mse_error = test(f"test/test_{i}.csv")
-            print('Test MSE: {:.6f}'.format(mse_error))
+            #print('Test NRMSE: {:.6f}'.format(mse_error))
             steps.append(i)
-            test_mse.append(mse_error)
+            test_err.append(mse_error)
             model.train()
 
-    return steps,test_mse
+    return steps,test_err
 
 
 if __name__ == '__main__':
-    steps,test_mse = train()
+    steps,test_err = train()
     #print(f"test_mse: {test_mse}")
-    plt.plot(steps,test_mse)
-    plt.title("lorenz96: MSE vs Training steps")
-    plt.ylabel("MSE")
+    #print(mean(test_err[100:]))
+    plt.plot(steps,test_err)
+    plt.title("lorenz96: NRMSE vs Training steps")
+    plt.ylabel("NRMSE")
     plt.xlabel("Training steps")
-    plt.savefig("MSE_vs_steps_lorenz.png")
+    plt.savefig("NRMSE_vs_steps_lorenz.png")
