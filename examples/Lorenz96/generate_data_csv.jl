@@ -11,11 +11,11 @@ end
 n = 5
 F = 0.9
 dt = 0.01
-trajectory_length = 50
+trajectory_length = 2000
 tspan = (0.0, trajectory_length * dt)
-num_csvs = 5
+num_csvs = 128
 
-group = "test"
+group = "train"
 for i in 1:num_csvs
     u0 = F .+ 0.5 .* (2 .* rand(n) .- 1)
     prob = ODEProblem(lorenz96,u0,tspan,F)

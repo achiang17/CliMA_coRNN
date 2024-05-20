@@ -11,16 +11,7 @@ class coRNNCell(nn.Module):
         self.epsilon = epsilon
         self.i2h = nn.Linear(n_inp + n_hid + n_hid, n_hid)
 
-    def forward(self, x, hy, hz):
-        # concatenated = torch.cat((x, hz, hy), 1)
-        
-        # # Debug statements
-        # print(f"x shape: {x.shape}")
-        # print(f"hz shape: {hz.shape}")
-        # print(f"hy shape: {hy.shape}")
-        # print(f"concatenated shape: {concatenated.shape}")
-        # print(f"i2h weight shape: {self.i2h.weight.shape}")
-        
+    def forward(self, x, hy, hz):      
         hz = hz + self.dt * (torch.tanh(self.i2h(torch.cat((x, hz, hy), 1)))
                              - self.gamma * hy - self.epsilon * hz)
         hy = hy + self.dt * hz
