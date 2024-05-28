@@ -16,7 +16,9 @@ parser = argparse.ArgumentParser(description='training parameters')
 parser.add_argument('--n_hid', type=int, default=128,
     help='hidden size of recurrent net')
 parser.add_argument('--seq_len', type=int, default=25,
-    help='trajectories used to train')
+    help='length of each sequence')
+parser.add_argument('--dim', type=int, default=4,
+    help='which dimension to predict from [0, 1, 2, 3, 4]')
 parser.add_argument('--log_interval', type=int, default=100,
     help='log interval')
 parser.add_argument('--lr', type=float, default=2e-2,
@@ -36,14 +38,13 @@ n_out = args.seq_len
 model = model.coRNN(n_inp, args.n_hid, n_out, args.dt, args.gamma, args.epsilon).to(device)
 
 
-
 objective = nn.MSELoss()
 optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
 def test(path_to_test_csv):
     model.eval()
     with torch.no_grad():
-        data, label = utils.get_data(path_to_test_csv, args.seq_len)
+        data, label = utils.get_data(path_to_test_csv, args.seq_len, args.dim)
         out = model(data.to(device))
         loss = objective(out, label.to(device))       
     return loss.item()
@@ -59,7 +60,7 @@ def train(F):
     
     for i in range(1,num_files+1):
         
-        data, label = utils.get_data(f"train{F}/train{F}_{i}.csv", args.seq_len)
+        data, label = utils.get_data(f"train{F}/train{F}_{i}.csv", args.seq_len, args.dim)
         # print(f"data: {data}")
         # print(f"data.size(): {data.size()}")
         # print(f"label: {label}")
