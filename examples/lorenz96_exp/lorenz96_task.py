@@ -49,8 +49,7 @@ def test(path_to_test_csv):
     return loss.item()
 
 
-def train():
-    F = '09'
+def train(F):
     train_dir = f'train{F}/'
     files = os.listdir(train_dir)
     num_files = len(files)
@@ -83,17 +82,19 @@ def train():
 if __name__ == '__main__':
     #seq_len = 3
     #data, label = utils.get_data(f"train09/train09_1.csv", seq_len)
-    
-    
-    steps,test_err = train()
+    F = '09'
+    steps,test_err = train(F)
     # for param in model.parameters():
     #     print("new param \n")
     #     print(f"param.size : {param.size()}")
     #     print(param)
     #     print("\n\n")
-    #print(f"test_mse: {test_mse}")
+    print(f"test_mse: {mean(test_err[100:])}")
     plt.plot(steps,test_err)
-    plt.title("lorenz96: MSE vs Training steps, F = 0.9")
     plt.ylabel("MSE")
     plt.xlabel("Training steps")
-    plt.savefig("MSE_vs_steps_lorenz09.png")
+    F_lit = '0.9'
+    if F == '8':
+        F_int = '8.0'
+    plt.title(f"lorenz96: MSE vs Training steps, F = {F_lit}")
+    plt.savefig(f"MSE_vs_steps_lorenz{F}.png")

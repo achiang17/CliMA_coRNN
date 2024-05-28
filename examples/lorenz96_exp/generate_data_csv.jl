@@ -15,11 +15,13 @@ trajectory_length = 2000
 tspan = (0.0, trajectory_length * dt)
 num_csvs = 128
 
-group = "train09"
-for i in 1:num_csvs
-    u0 = F .+ 0.5 .* (2 .* rand(n) .- 1)
-    prob = ODEProblem(lorenz96,u0,tspan,F)
-    sol = solve(prob,Euler(),dt=dt)
-    df = DataFrame(sol.u, :auto)
-    CSV.write("$(group)/$(group)_$(i).csv", df)
+groups = ["train09", "test09", "train8", "test8"]
+for group in groups
+    for i in 1:num_csvs
+        u0 = F .+ 0.5 .* (2 .* rand(n) .- 1)
+        prob = ODEProblem(lorenz96,u0,tspan,F)
+        sol = solve(prob,Euler(),dt=dt)
+        df = DataFrame(sol.u, :auto)
+        CSV.write("$(group)/$(group)_$(i).csv", df)
+    end
 end
