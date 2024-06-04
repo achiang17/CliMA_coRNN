@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 import pandas as pd
+import re
 
 def parse_data(df, start, end, dim):
     tensor_dict = {}
@@ -26,5 +27,12 @@ def create_data(df, seq_len, dim):
 def get_data(path_to_csv, seq_len, dim):
     df = pd.read_csv(path_to_csv)
     df = df.transpose()
+    
+    pattern = r'/(\d+\.\d+)_\d+\.csv'
+    match = re.search(pattern, path_to_csv)
+    F = float(match.group(1))
+    F_col = F * np.ones(len(df.index))
+    df[5] = F_col
+
     data, labels = create_data(df, seq_len, dim)
     return data, labels
