@@ -55,20 +55,20 @@ def test(path_to_test_csv):
 def predict(path_to_test_csv, last_iter_bool):
     model.eval()
     with torch.no_grad():
-        data, label = utils.get_data(path_to_test_csv, 1000, args.dim)
+        data, label = utils.get_data(path_to_test_csv, 2000, args.dim)
         # print(f"data size :{data.size()}")
         out = model(data.to(device))
         #print(f"out: {out}")
         if last_iter_bool:
             out_np = out.numpy()
             # print(f"out_np : {out_np.shape}")
-            concat_out = np.concatenate(out_np).tolist()
+            #concat_out = np.concatenate(out_np).tolist()
             label_np = label.numpy()
-            concat_label = np.concatenate(label_np).tolist()
+            #concat_label = np.concatenate(label_np).tolist()
 
             plt.figure()
-            plt.plot(concat_out, label='Predicted')
-            plt.plot(concat_label, label='True')
+            plt.plot(out_np, label='Predicted')
+            plt.plot(label_np, label='True')
             plt.title('Predicted vs True Trajectories (x4)')
             plt.xlabel('Step')
             plt.ylabel('x4')
