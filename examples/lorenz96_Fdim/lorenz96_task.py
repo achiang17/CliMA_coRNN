@@ -44,14 +44,24 @@ model = model.coRNN(n_inp, args.n_hid, n_out, args.dt, args.gamma, args.epsilon)
 objective = nn.MSELoss()
 optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
-def test(path_to_test_csv, last_iter_bool):
+def test(path_to_test_csv):
     model.eval()
     with torch.no_grad():
         data, label = utils.get_data(path_to_test_csv, args.seq_len, args.dim)
         out = model(data.to(device))
-        loss = objective(out, label.to(device))       
+        loss = objective(out, label.to(device))
+    return loss.item()
+
+def predict(path_to_test_csv, last_iter_bool):
+    model.eval()
+    with torch.no_grad():
+        data, label = utils.get_data(path_to_test_csv, 1000, args.dim)
+        # print(f"data size :{data.size()}")
+        out = model(data.to(device))
+        #print(f"out: {out}")
         if last_iter_bool:
             out_np = out.numpy()
+            # print(f"out_np : {out_np.shape}")
             concat_out = np.concatenate(out_np).tolist()
             label_np = label.numpy()
             concat_label = np.concatenate(label_np).tolist()
@@ -64,7 +74,7 @@ def test(path_to_test_csv, last_iter_bool):
             plt.ylabel('x4')
             plt.legend()
             plt.savefig('Predicted_vs_Observed_Trajectory.png')
-    return loss.item()
+    return
 
 
 def train():
@@ -93,7 +103,8 @@ def train():
             if i == len(train_files)-1:
                 last_iter_bool = True
             test_csv_path = os.path.join(test_dir,test_files[i])
-            error = test(test_csv_path, last_iter_bool)
+            error = test(test_csv_path)
+            predict(test_csv_path, last_iter_bool)
             steps.append(i)
             test_err.append(error)
             model.train()
