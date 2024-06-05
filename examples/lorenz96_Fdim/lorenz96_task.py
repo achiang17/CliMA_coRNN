@@ -36,7 +36,7 @@ parser.add_argument('--epsilon',type=float, default = 15,
 args = parser.parse_args()
 
 n_inp = 5
-n_out = args.seq_len
+n_out = 1
 
 model = model.coRNN(n_inp, args.n_hid, n_out, args.dt, args.gamma, args.epsilon).to(device)
 
@@ -83,6 +83,8 @@ def train():
         data, label = utils.get_data(os.path.join(train_dir,train_files[i]), args.seq_len, args.dim)
         optimizer.zero_grad()
         out = model(data.to(device))
+        # print(f"out size:{out.size()}")
+        # print(f"label size: {label.size()}")
         loss = objective(out, label.to(device))
         loss.backward()
         optimizer.step()
