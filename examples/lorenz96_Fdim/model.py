@@ -29,12 +29,9 @@ class coRNN(nn.Module):
     def forward(self, x):
         hy = Variable(torch.zeros(x.size(1), self.n_hid, dtype=torch.float32)).to(device)
         hz = Variable(torch.zeros(x.size(1), self.n_hid, dtype=torch.float32)).to(device)
-        #print(f"x size: {x.size()}")
         output = torch.zeros(x.size(1), x.size(0), self.n_out, requires_grad=False)
-        #print(f"output size: {output.size()}")
         for t in range(x.size(0)):
             hy, hz = self.cell(x[t], hy, hz)
-            #print(f"readout size: {self.readout(hy).size()}")
             output[:,t,:] = self.readout(hy)
         output = torch.squeeze(output)
         return output

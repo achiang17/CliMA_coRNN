@@ -1,7 +1,6 @@
 import torch
 from torch import nn, optim
 import model
-#import nrmse
 import torch.nn.utils
 import utils
 import argparse
@@ -18,7 +17,7 @@ parser = argparse.ArgumentParser(description='training parameters')
 
 parser.add_argument('--n_hid', type=int, default=128,
     help='hidden size of recurrent net')
-parser.add_argument('--seq_len', type=int, default=100,
+parser.add_argument('--seq_len', type=int, default=250,
     help='length of each sequence')
 parser.add_argument('--dim', type=int, default=4,
     help='which dimension to predict from [0, 1, 2, 3, 4]')
@@ -52,28 +51,27 @@ def test(path_to_test_csv):
         loss = objective(out, label.to(device))
     return loss.item()
 
-def predict(path_to_test_csv, last_iter_bool):
+def predict(path_to_test_csv):
     model.eval()
+    
+    pattern = r'/(\d+\.\d+)_\d+\.csv'
+    match = re.search(pattern, path_to_test_csv)
+    F = float(match.group(1))
+
     with torch.no_grad():
         data, label = utils.get_data(path_to_test_csv, 2000, args.dim)
-        # print(f"data size :{data.size()}")
         out = model(data.to(device))
-        #print(f"out: {out}")
-        if last_iter_bool:
-            out_np = out.numpy()
-            # print(f"out_np : {out_np.shape}")
-            #concat_out = np.concatenate(out_np).tolist()
-            label_np = label.numpy()
-            #concat_label = np.concatenate(label_np).tolist()
+        out_np = out.numpy()
+        label_np = label.numpy().tolist()
 
-            plt.figure()
-            plt.plot(out_np, label='Predicted')
-            plt.plot(label_np, label='True')
-            plt.title('Predicted vs True Trajectories (x4)')
-            plt.xlabel('Step')
-            plt.ylabel('x4')
-            plt.legend()
-            plt.savefig('Predicted_vs_Observed_Trajectory.png')
+        plt.figure()
+        plt.plot(out_np, label='Predicted')
+        plt.plot(label_np[0], label='True')
+        plt.title(f'Predicted vs True Trajectories: F = {F}')
+        plt.xlabel('Step')
+        plt.ylabel('x4')
+        plt.legend()
+        plt.savefig(f'Predicted_vs_Observed_Trajectory_{F}.png')
     return
 
 
@@ -88,26 +86,27 @@ def train():
 
     test_err = []
     steps = []
-    last_iter_bool = False
     for i in range(len(train_files)):
         data, label = utils.get_data(os.path.join(train_dir,train_files[i]), args.seq_len, args.dim)
         optimizer.zero_grad()
         out = model(data.to(device))
-        # print(f"out size:{out.size()}")
-        # print(f"label size: {label.size()}")
         loss = objective(out, label.to(device))
         loss.backward()
         optimizer.step()
 
         if(i%1==0 and i!=0):
-            if i == len(train_files)-1:
-                last_iter_bool = True
             test_csv_path = os.path.join(test_dir,test_files[i])
+           
+            # predict
+            if i == len(train_files)-1:
+                predict(test_csv_path)
+
             error = test(test_csv_path)
-            predict(test_csv_path, last_iter_bool)
             steps.append(i)
             test_err.append(error)
             model.train()
+
+            
 
     return steps,test_err
 
