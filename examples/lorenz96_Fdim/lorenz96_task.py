@@ -48,7 +48,7 @@ def test(path_to_test_csv):
     with torch.no_grad():
         data, label = utils.get_data(path_to_test_csv, args.seq_len, args.dim)
         out = model(data.to(device))
-        loss = objective(out, label.to(device))
+        loss = objective(out[1:], label[1:].to(device))
     return loss.item()
 
 def predict(path_to_test_csv):
@@ -62,16 +62,16 @@ def predict(path_to_test_csv):
         data, label = utils.get_data(path_to_test_csv, 2000, args.dim)
         out = model(data.to(device))
         out_np = out.numpy()
-        label_np = label.numpy().tolist()
+        label_np = torch.squeeze(label).numpy()
 
         plt.figure()
         plt.plot(out_np, label='Predicted')
-        plt.plot(label_np[0], label='True')
+        plt.plot(label_np, label='True')
         plt.title(f'Predicted vs True Trajectories: F = {F}')
         plt.xlabel('Step')
         plt.ylabel('x4')
         plt.legend()
-        plt.savefig(f'Predicted_vs_Observed_Trajectory_{F}.png')
+        plt.savefig(f'Predicted_vs_Observed_Trajectory.png')
     return
 
 
