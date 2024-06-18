@@ -15,7 +15,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 parser = argparse.ArgumentParser(description='training parameters')
 
-parser.add_argument('--n_hid', type=int, default=128,
+parser.add_argument('--n_hid', type=int, default=64,
     help='hidden size of recurrent net')
 parser.add_argument('--seq_len', type=int, default=250,
     help='length of each sequence')
@@ -123,7 +123,7 @@ def train(split):
 
 
 if __name__ == '__main__':
-    split = "basin"
+    split = "time"
     steps,test_err = train(split)
     # print(f"test_mse: {mean(test_err[100:])}")
     plt.figure()
