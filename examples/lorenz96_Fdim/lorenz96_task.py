@@ -123,7 +123,7 @@ def train(split):
 
 
 if __name__ == '__main__':
-    split = "time"
+    split = "basin"
     steps,test_err = train(split)
     # print(f"test_mse: {mean(test_err[100:])}")
     plt.figure()
