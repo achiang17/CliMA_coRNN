@@ -74,7 +74,7 @@ def predict(path_to_test_csv, split):
         plt.xlabel('Step')
         plt.ylabel('x4')
         plt.legend()
-        plt.savefig(f'{split.title()}_Predicted_vs_Observed_Trajectory.png')
+        plt.savefig(f'plots/{split.title()}_Predicted_vs_Observed_Trajectory.png')
     return
 
 
@@ -123,7 +123,7 @@ def train(split):
 
 
 if __name__ == '__main__':
-    split = "basin"
+    split = "time"
     steps,test_err = train(split)
     # print(f"test_mse: {mean(test_err[100:])}")
     plt.figure()
@@ -131,4 +131,4 @@ if __name__ == '__main__':
     plt.ylabel("MSE")
     plt.xlabel("Training steps")
     plt.title(f"{split.title()}-Split Lorenz96: MSE vs Training steps")
-    plt.savefig(f"{split.title()}_MSE_vs_steps_lorenz.png")
+    plt.savefig(f"plots/{split.title()}_MSE_vs_steps_lorenz.png")
