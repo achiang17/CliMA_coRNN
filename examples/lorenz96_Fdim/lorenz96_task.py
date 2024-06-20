@@ -159,7 +159,7 @@ if __name__ == '__main__':
         sorted_NSE_splits.append(test_NSE)
         cdf_splits.append(cdf_series.tolist())
 
-    plt.figure(figsize=(8, 6))
+    plt.figure(figsize=(6, 6))
     plt.plot(sorted_NSE_splits[0], cdf_splits[0], label=split_vals[0])
     plt.plot(sorted_NSE_splits[1], cdf_splits[1], label=split_vals[1])
     plt.xlabel('NSE')
@@ -170,4 +170,3 @@ if __name__ == '__main__':
     plt.legend()
 
     plt.savefig(f'plots/NNSE/NSE_CDFs.png')
-    plt.show()
