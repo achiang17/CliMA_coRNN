@@ -11,6 +11,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from statistics import mean
 from nnse import NNSELoss
+from nkge import NKGELoss
+from math import sqrt
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -41,7 +43,7 @@ n_out = 1
 model = model.coRNN(n_inp, args.n_hid, n_out, args.dt, args.gamma, args.epsilon).to(device)
 
 
-objective = NNSELoss() # nn.MSELoss()
+objective = NKGELoss() # nn.MSELoss()
 optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
 def test(path_to_test_csv, split, loss_func):
@@ -51,7 +53,7 @@ def test(path_to_test_csv, split, loss_func):
         out = model(data.to(device))
         loss = objective(out[1:], label[1:].to(device))
     loss = loss.item()
-    if loss_func == "NNSE":
+    if loss_func == ("NNSE" or "NKGE"):
         loss = 1 - loss
     return loss
 
@@ -128,9 +130,9 @@ def train(split, loss_func):
 
 if __name__ == '__main__':
     # time or basin
-    split = "time"
-    # MSE, NNSE, or KGE
-    loss_func = 'NNSE'
+    split = "basin"
+    # MSE, NNSE, or NKGE
+    loss_func = 'NKGE'
 
     steps,test_err = train(split.lower(), loss_func.upper())
 
@@ -140,10 +142,17 @@ if __name__ == '__main__':
     plt.xlabel("Training steps")
     plt.title(f"{split.title()}-Split Lorenz96: {loss_func} vs Training steps")
     if loss_func.upper() == "NNSE":
-        count_lt_0 = [err for err in test_err if err < 0.5]
-        percent_NSE_lt_0 = 100 * (len(count_lt_0) / len(test_err))
-        print(f"%NSE < 0 : {round(percent_NSE_lt_0,2)}%")
+        count_lt = [err for err in test_err if err < 0.5]
+        percent_NSE_lt = 100 * (len(count_lt) / len(test_err))
+        print(f"%NSE < 0 : {round(percent_NSE_lt,2)}%")
         plt.ylim(0,1)
         plt.fill_between(steps, 0, 0.5, alpha=0.3)
         plt.text(0.7 * len(steps), 0.1, f"%NSE < 0 : {round(percent_NSE_lt_0,2)}%")
+    if loss_func.upper() == "NKGE":
+        count_lt = [err for err in test_err if err < 1-sqrt(2)]
+        percent_KGE = 100 * (len(count_lt) / len(test_err))
+        print(f"%KGE < 1 - sqrt(2) : {round(percent_KGE,2)}%")
+        # plt.ylim(-5,1)
+        # plt.fill_between(steps, -5, 1 - sqrt(2), alpha=0.3)
+    
     plt.savefig(f"plots/{loss_func.upper()}/{split.title()}_{loss_func}_vs_steps_lorenz.png")
