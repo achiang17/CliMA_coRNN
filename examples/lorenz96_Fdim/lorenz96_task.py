@@ -41,18 +41,21 @@ n_out = 1
 model = model.coRNN(n_inp, args.n_hid, n_out, args.dt, args.gamma, args.epsilon).to(device)
 
 
-objective = NNSELoss() #nn.MSELoss()
+objective = NNSELoss() # nn.MSELoss()
 optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
-def test(path_to_test_csv, split):
+def test(path_to_test_csv, split, loss_func):
     model.eval()
     with torch.no_grad():
         data, label = utils.get_data(path_to_test_csv, args.seq_len, args.dim, split, "test")
         out = model(data.to(device))
         loss = objective(out[1:], label[1:].to(device))
-    return loss.item()
+    loss = loss.item()
+    if loss_func == "NNSE":
+        loss = 1 - loss
+    return loss
 
-def predict(path_to_test_csv, split):
+def predict(path_to_test_csv, split, loss_func):
     model.eval()
     
     pattern = r'/(\d+\.\d+)_\d+\.csv'
@@ -71,15 +74,15 @@ def predict(path_to_test_csv, split):
         plt.figure()
         plt.plot(out_np, label='Predicted')
         plt.plot(label_np, label='True')
-        plt.title(f'{split.title()}-Split Predicted vs True Trajectories: F = {F}')
+        plt.title(f'{split.title()}-Split w/ {loss_func} loss Predicted vs True Trajectories: F = {F}')
         plt.xlabel('Step')
         plt.ylabel('x4')
         plt.legend()
-        plt.savefig(f'plots/{split.title()}_Predicted_vs_Observed_Trajectory.png')
+        plt.savefig(f'plots/{loss_func}/{split.title()}_{loss_func}_Predicted_vs_Observed_Trajectory.png')
     return
 
 
-def train(split):
+def train(split, loss_func):
     if split == "basin":
         train_dir = 'basin_split_train/'
         train_files = os.listdir(train_dir)
@@ -114,8 +117,8 @@ def train(split):
            
             # predict
             if i == len(train_files)-1:
-                predict(test_csv_path, split)
-            error = 1 - test(test_csv_path, split)
+                predict(test_csv_path, split, loss_func)
+            error = test(test_csv_path, split, loss_func)
             steps.append(i)
             test_err.append(error)
             model.train()
@@ -124,20 +127,23 @@ def train(split):
 
 
 if __name__ == '__main__':
+    # time or basin
     split = "time"
-    steps,test_err = train(split.lower())
-    # print(f"test_mse: {mean(test_err[100:])}")
-    count_lt_0 = [err for err in test_err if err < 0.5]
-    percent_NSE_lt_0 = 100 * (len(count_lt_0) / len(test_err))
-    print(f"%NSE < 0 : {round(percent_NSE_lt_0,2)}%")
+    # MSE, NNSE, or KGE
+    loss_func = 'NNSE'
 
-    error = 'NNSE'
+    steps,test_err = train(split.lower(), loss_func.upper())
+
     plt.figure()
     plt.plot(steps,test_err)
-    plt.fill_between(steps, 0, 0.5, alpha=0.3)
-    plt.ylabel(error)
+    plt.ylabel(loss_func.upper())
     plt.xlabel("Training steps")
-    plt.title(f"{split.title()}-Split Lorenz96: {error} vs Training steps")
-    plt.ylim(0,1)
-    plt.text(0.7 * len(steps), 0.1, f"%NSE < 0 : {round(percent_NSE_lt_0,2)}%")
-    plt.savefig(f"plots/{split.title()}_{error}_vs_steps_lorenz.png")
+    plt.title(f"{split.title()}-Split Lorenz96: {loss_func} vs Training steps")
+    if loss_func.upper() == "NNSE":
+        count_lt_0 = [err for err in test_err if err < 0.5]
+        percent_NSE_lt_0 = 100 * (len(count_lt_0) / len(test_err))
+        print(f"%NSE < 0 : {round(percent_NSE_lt_0,2)}%")
+        plt.ylim(0,1)
+        plt.fill_between(steps, 0, 0.5, alpha=0.3)
+        plt.text(0.7 * len(steps), 0.1, f"%NSE < 0 : {round(percent_NSE_lt_0,2)}%")
+    plt.savefig(f"plots/{loss_func.upper()}/{split.title()}_{loss_func}_vs_steps_lorenz.png")
