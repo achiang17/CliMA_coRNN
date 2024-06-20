@@ -10,6 +10,7 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 from statistics import mean
+from nnse import NNSELoss
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -40,7 +41,7 @@ n_out = 1
 model = model.coRNN(n_inp, args.n_hid, n_out, args.dt, args.gamma, args.epsilon).to(device)
 
 
-objective = nn.MSELoss()
+objective = NNSELoss() #nn.MSELoss()
 optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
 def test(path_to_test_csv, split):
@@ -114,7 +115,7 @@ def train(split):
             # predict
             if i == len(train_files)-1:
                 predict(test_csv_path, split)
-            error = test(test_csv_path, split)
+            error = 1 - test(test_csv_path, split)
             steps.append(i)
             test_err.append(error)
             model.train()
@@ -124,11 +125,19 @@ def train(split):
 
 if __name__ == '__main__':
     split = "time"
-    steps,test_err = train(split)
+    steps,test_err = train(split.lower())
     # print(f"test_mse: {mean(test_err[100:])}")
+    count_lt_0 = [err for err in test_err if err < 0.5]
+    percent_NSE_lt_0 = 100 * (len(count_lt_0) / len(test_err))
+    print(f"%NSE < 0 : {round(percent_NSE_lt_0,2)}%")
+
+    error = 'NNSE'
     plt.figure()
     plt.plot(steps,test_err)
-    plt.ylabel("MSE")
+    plt.fill_between(steps, 0, 0.5, alpha=0.3)
+    plt.ylabel(error)
     plt.xlabel("Training steps")
-    plt.title(f"{split.title()}-Split Lorenz96: MSE vs Training steps")
-    plt.savefig(f"plots/{split.title()}_MSE_vs_steps_lorenz.png")
+    plt.title(f"{split.title()}-Split Lorenz96: {error} vs Training steps")
+    plt.ylim(0,1)
+    plt.text(0.7 * len(steps), 0.1, f"%NSE < 0 : {round(percent_NSE_lt_0,2)}%")
+    plt.savefig(f"plots/{split.title()}_{error}_vs_steps_lorenz.png")
