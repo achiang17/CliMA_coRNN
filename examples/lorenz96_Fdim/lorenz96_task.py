@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from statistics import mean
-from nnse import NNSELoss
+from nse import NSELoss
 from nkge import NKGELoss
 from math import sqrt
 
@@ -36,24 +36,27 @@ n_out = 1
 def initialize_model():
     return model_module.coRNN(n_inp, args.n_hid, n_out, args.dt, args.gamma, args.epsilon).to(device)
 
-objective = NNSELoss()  # nn.MSELoss()
+#objective = NSELoss()  # nn.MSELoss()
 
-def test(path_to_test_csv, split, loss_func, model):
+def test(model, path_to_test_csv, split, objective):
     model.eval()
     with torch.no_grad():
         data, label = utils.get_data(path_to_test_csv, args.seq_len, args.dim, split, "test")
         out = model(data.to(device))
         loss = objective(out[1:], label[1:].to(device))
+    
     loss = loss.item()
-    if loss_func == "NNSE":
+    if isinstance(objective, NSELoss):
         loss = 1 - loss
     return loss
 
-def predict(path_to_test_csv, split, loss_func, model):
+def predict(model, path_to_test_csv, split, train_objective, test_objective):
     model.eval()
     pattern = r'/(\d+\.\d+)_\d+\.csv'
     match = re.search(pattern, path_to_test_csv)
     F = float(match.group(1))
+    train_loss_func = get_loss_from_obj(train_objective)   
+    test_loss_func = get_loss_from_obj(test_objective)
     traj_len = 2000
 
     with torch.no_grad():
@@ -67,14 +70,15 @@ def predict(path_to_test_csv, split, loss_func, model):
         plt.figure()
         plt.plot(out_np, label='Predicted')
         plt.plot(label_np, label='True')
-        plt.title(f'{split.title()}-Split w/ {loss_func} loss Predicted vs True Trajectories: F = {F}')
+        plt.title(f"{split.title()}-Split: Predicted vs Observed Trajectory F = {F}")
         plt.xlabel('Step')
         plt.ylabel('x4')
         plt.legend()
-        plt.savefig(f'plots/{loss_func}/{split.title()}_{loss_func}_Predicted_vs_Observed_Trajectory.png')
+        plt.savefig(f'plots/{test_loss_func}/{split.title()}_{train_loss_func}_{test_loss_func}_traj.png')
     return
 
-def train(split, loss_func, model, optimizer):
+def train(model, optimizer, split, train_objective, test_objective):
+    random.seed(42)
     if split == "basin":
         train_dir = 'basin_split_train/'
         train_files = os.listdir(train_dir)
@@ -100,73 +104,92 @@ def train(split, loss_func, model, optimizer):
         data, label = utils.get_data(os.path.join(train_dir, train_files[i]), args.seq_len, args.dim, split, "train")
         optimizer.zero_grad()
         out = model(data.to(device))
-        loss = objective(out, label.to(device))
+        loss = train_objective(out, label.to(device))
         loss.backward()
         optimizer.step()
 
         if i % 1 == 0 and i != 0:
             test_csv_path = os.path.join(test_dir, test_files[i])
 
-            # predict
+            # Plot Predicted vs True Trajectory
             if i == len(train_files) - 1:
-                predict(test_csv_path, split, loss_func, model)
-            error = test(test_csv_path, split, loss_func, model)
+                predict(model, test_csv_path, split, train_objective, test_objective)
+            
+            error = test(model, test_csv_path, split, test_objective)
             steps.append(i)
             test_err.append(error)
             model.train()
 
     return steps, test_err
 
-def create_loss_plot(steps, test_err, split, loss_func):
+
+def create_loss_plot(steps, test_err, split, train_objective, test_objective):
+    train_loss_func = get_loss_from_obj(train_objective)   
+    test_loss_func = get_loss_from_obj(test_objective)
+
     plt.figure()
     plt.plot(steps, test_err)
-    plt.ylabel(loss_func.upper())
-    plt.xlabel("Training steps")
-    plt.title(f"{split.title()}-Split Lorenz96: {loss_func} vs Training steps")
-    if loss_func.upper() == "NNSE":
-        count_lt = [err for err in test_err if err < 0.5]
+    plt.ylabel(test_loss_func)
+    plt.xlabel("Training Steps")
+    plt.title(f"{split.title()}-Split: {test_loss_func} Loss Trained with {train_loss_func} Loss")
+    if test_loss_func.upper() == "NSE":
+        count_lt = [err for err in test_err if err < 0]
         percent_NSE_lt = 100 * (len(count_lt) / len(test_err))
         print(f"{split.title()}-Split %NSE < 0 : {round(percent_NSE_lt, 2)}%")
-        plt.ylim(0, 1)
-        plt.fill_between(steps, 0, 0.5, alpha=0.3)
+        plt.ylim(-2, 1)
+        plt.fill_between(steps, -2, 0, alpha=0.3)
         plt.text(0.7 * len(steps), 0.1, f"%NSE < 0 : {round(percent_NSE_lt, 2)}%")
-    plt.savefig(f"plots/{loss_func.upper()}/{split.title()}_{loss_func}_vs_steps_lorenz.png")
+    plt.savefig(f"plots/{test_loss_func}/{split.title()}_{train_loss_func}_{test_loss_func}_errors.png")
+
+
+def get_cdf(test_err):
+    test_err.sort()
+    NSE_series = pd.Series(test_err)
+    cdf_series = NSE_series.rank(method='first', pct=True)
+    cdf_list = cdf_series.tolist()
+    return test_err, cdf_list
+
+
+def get_loss_from_obj(objective):
+    if isinstance(objective, NSELoss):
+        return "NSE"
+    elif isinstance(objective, nn.MSELoss):
+        return "MSE"
+    else:
+        return None
 
 if __name__ == '__main__':
-    # time or basin
     split_vals = ["basin", "time"]
-    # MSE or NNSE
-    loss_func = 'NNSE'
+    train_objective_vals = [nn.MSELoss(), NSELoss()]
+    test_objective = NSELoss()
 
-    test_errs = []
+    test_errs = {}
     for split in split_vals:
-        model = initialize_model()  # Initialize the model
-        optimizer = optim.Adam(model.parameters(), lr=args.lr)  # Reinitialize the optimizer
-        steps, test_err = train(split.lower(), loss_func.upper(), model, optimizer)
-        test_errs.append(test_err)
-        create_loss_plot(steps, test_err, split, loss_func)
+        for train_objective in train_objective_vals:
+            train_loss_func = get_loss_from_obj(train_objective)
+            model = initialize_model()
+            optimizer = optim.Adam(model.parameters(), lr=args.lr)
+            steps, test_err = train(model, optimizer, split.lower(), train_objective, test_objective)
+            create_loss_plot(steps, test_err, split, train_objective, test_objective)
+            test_errs[(split, train_loss_func)] = test_err
 
-    sorted_NSE_splits = []
-    cdf_splits = []
-    for test_err in test_errs:
-        # Create NSE CDF plot
-        test_NSE = [2 - (1 / nnse) for nnse in test_err]
-        test_NSE.sort()
 
-        NSE_series = pd.Series(test_NSE)
-        cdf_series = NSE_series.rank(method='first', pct=True)
+    # Additional CDF Plots for NSE loss
+    if isinstance(test_objective, NSELoss):
+        NSE_map = {}
+        cdf_map = {}
+        for (split, train_loss_func), error in test_errs.items():
+            NSE, cdf = get_cdf(error)
+            NSE_map[(split, train_loss_func)] = NSE
+            cdf_map[(split, train_loss_func)] = cdf
 
-        sorted_NSE_splits.append(test_NSE)
-        cdf_splits.append(cdf_series.tolist())
-
-    plt.figure(figsize=(6, 6))
-    plt.plot(sorted_NSE_splits[0], cdf_splits[0], label=split_vals[0])
-    plt.plot(sorted_NSE_splits[1], cdf_splits[1], label=split_vals[1])
-    plt.xlabel('NSE')
-    plt.ylabel('CDF')
-    plt.title('CDFs of NSE')
-    plt.xlim(0, 1)
-    plt.grid(True)
-    plt.legend()
-
-    plt.savefig(f'plots/NNSE/NSE_CDFs.png')
+        plt.figure(figsize=(6, 6))
+        for (split, train_loss_func) in NSE_map.keys():     
+            plt.plot(NSE_map[(split, train_loss_func)], cdf_map[(split, train_loss_func)], label=f'{split}: {train_loss_func} trained')
+        plt.xlabel('NSE')
+        plt.ylabel('CDF')
+        plt.title('CDFs of NSE')
+        plt.xlim(0, 1)
+        plt.grid(True)
+        plt.legend()
+        plt.savefig(f'plots/NSE/NSE_CDFs.png')
