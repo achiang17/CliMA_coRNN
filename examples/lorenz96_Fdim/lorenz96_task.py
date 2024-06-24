@@ -78,7 +78,7 @@ def predict(model, path_to_test_csv, split, train_objective, test_objective):
     return
 
 def train(model, optimizer, split, train_objective, test_objective):
-    random.seed(42)
+    # random.seed(1)
     if split == "basin":
         train_dir = 'basin_split_train/'
         train_files = os.listdir(train_dir)
@@ -169,7 +169,9 @@ if __name__ == '__main__':
             train_loss_func = get_loss_from_obj(train_objective)
             model = initialize_model()
             optimizer = optim.Adam(model.parameters(), lr=args.lr)
-            steps, test_err = train(model, optimizer, split.lower(), train_objective, test_objective)
+            epochs = 2
+            for i in range(epochs):
+                steps, test_err = train(model, optimizer, split.lower(), train_objective, test_objective)
             create_loss_plot(steps, test_err, split, train_objective, test_objective)
             test_errs[(split, train_loss_func)] = test_err
 
