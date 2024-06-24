@@ -21,7 +21,7 @@ parser = argparse.ArgumentParser(description='training parameters')
 parser.add_argument('--n_hid', type=int, default=64, help='hidden size of recurrent net')
 parser.add_argument('--seq_len', type=int, default=250, help='length of each sequence')
 parser.add_argument('--dim', type=int, default=4, help='which dimension to predict from [0, 1, 2, 3, 4]')
-parser.add_argument('--hdim', type=int, default=3, help='which dimension to predict from [0, 1, 2, 3, 4]')
+parser.add_argument('--hdim', type=int, default=3, help='which additional dimension to remove from [0, 1, 2, 3]')
 parser.add_argument('--log_interval', type=int, default=100, help='log interval')
 parser.add_argument('--lr', type=float, default=2e-2, help='learning rate')
 parser.add_argument('--dt', type=float, default=1e-2, help='step size <dt> of the coRNN')
@@ -74,7 +74,7 @@ def predict(model, path_to_test_csv, split, train_objective, test_objective):
         plt.xlabel('Step')
         plt.ylabel('x4')
         plt.legend()
-        plt.savefig(f'plots/{test_loss_func}/{split.title()}_{train_loss_func}_{test_loss_func}_traj.png')
+        plt.savefig(f'plots/{test_loss_func}/1{split.title()}_{train_loss_func}_{test_loss_func}_traj.png')
     return
 
 def train(model, optimizer, split, train_objective, test_objective):
@@ -169,10 +169,10 @@ if __name__ == '__main__':
             train_loss_func = get_loss_from_obj(train_objective)
             model = initialize_model()
             optimizer = optim.Adam(model.parameters(), lr=args.lr)
-            epochs = 2
+            epochs = 1
             for i in range(epochs):
                 steps, test_err = train(model, optimizer, split.lower(), train_objective, test_objective)
-            create_loss_plot(steps, test_err, split, train_objective, test_objective)
+            #create_loss_plot(steps, test_err, split, train_objective, test_objective)
             test_errs[(split, train_loss_func)] = test_err
 
 
@@ -194,4 +194,4 @@ if __name__ == '__main__':
         plt.xlim(0, 1)
         plt.grid(True)
         plt.legend()
-        plt.savefig(f'plots/NSE/NSE_CDFs.png')
+        plt.savefig(f'plots/NSE/1NSE_CDFs.png')

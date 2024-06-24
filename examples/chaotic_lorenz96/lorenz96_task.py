@@ -56,13 +56,13 @@ def predict(path_to_test_csv, split):
     
     pattern = r'/(\d+\.\d+)_\d+\.csv'
     match = re.search(pattern, path_to_test_csv)
-    F = 8.05 #float(match.group(1))
+    F = 1.55#8.05 #float(match.group(1))
     traj_len = 2000
 
     with torch.no_grad():
         if split == 'time':
             traj_len = 1000
-        data, label = utils.get_data('basin_split_test/8.05_5.csv', traj_len, args.dim, split, "test")
+        data, label = utils.get_data('basin_split_test/1.55_5.csv', traj_len, args.dim, split, "test")
         out = model(data.to(device))
         out_np = out.numpy()
         label_np = torch.squeeze(label).numpy()
@@ -74,7 +74,7 @@ def predict(path_to_test_csv, split):
         plt.xlabel('Step')
         plt.ylabel('x4')
         plt.legend()
-        plt.savefig(f'plots/{split.title()}_Predicted_vs_Observed_Trajectory.png')
+        plt.savefig(f'plots/{split.title()}_Predicted_vs_Observed_Trajectory_{F}.png')
     return
 
 
@@ -99,6 +99,7 @@ def train(split):
     else:
         raise ValueError(f"{split} is an invalid input. Instead use 'basin' or 'time'")
 
+    print(len(train_files))
     test_err = []
     steps = []
     for i in range(len(train_files)):
@@ -113,7 +114,8 @@ def train(split):
             test_csv_path = os.path.join(test_dir,test_files[i])
            
             # predict
-            if i == len(train_files)-1:
+            if i == len(train_files)-10:
+                print('predict')
                 predict(test_csv_path, split)
             error = test(test_csv_path, split)
             steps.append(i)
